@@ -5,6 +5,7 @@
 🌟 SpielprinzipSetup: Zwei Spieler geben verdeckt eine geheime Nachricht ein und wählen einen Anzeigemodus (Normal, Spiegelverkehrt oder Buchstabensalat).Memory: Die Spieler decken abwechselnd Karten auf. Die Kartenpaare bestehen aus zusammengehörigen Lerninhalten (z. B. Funktion und Graph).Das Duell: Gefundene Paare verschwinden und geben den Blick auf die geheime Nachricht im Hintergrund frei.Gewinnen: Wer ein Pärchen findet, darf für 3 Sekunden versuchen, die Nachricht zu erraten. Wer sie zuerst korrekt eintippt (oder am Ende die meisten Punkte hat), gewinnt!
 
 🚀 NutzungDas Tool ist eine Single-File-Application.Öffne die Datei MemoryBuilder.html in einem modernen Browser.Editor-Modus: Erstelle eigene Kartenpaare oder importiere sie.Export: Klicke auf "Als HTML speichern", um das fertige Spiel als eigenständige Datei herunterzuladen. Diese Datei läuft offline und kann einfach weitergegeben werden.
+Hier ein Beispiel: <a href=https://codekoch.github.io/lernmemory/LernmemoryBeispiel_klein.html>LernmemoryBeispiel_klein.html</a>
 
 📝 Erstellung von JSON-VorlagenDu kannst Kartensets extern vorbereiten und über den "JSON Import" Button laden.GrundstrukturDie Datei muss ein valides JSON-Objekt sein, das ein Array pairs enthält.{
   "pairs": [
