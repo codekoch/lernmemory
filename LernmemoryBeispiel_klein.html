@@ -8,6 +8,7 @@
     window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, svg: { fontCache: 'global' } };
     </script>
     <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: system-ui, -apple-system, sans-serif; background: #f1f5f9; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: #0f172a; }
@@ -87,7 +88,20 @@
         function initBoard() {
             let deck=[]; config.pairs.forEach(p=>{ deck.push({id:'a-'+p.id, pid:p.id, html:p.a}); deck.push({id:'b-'+p.id, pid:p.id, html:p.b}); });
             for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; }
-            const grid=document.getElementById('grid'), count=deck.length, cols=Math.ceil(Math.sqrt(count)), rows=Math.ceil(count/cols);
+            const grid=document.getElementById('grid'), count=deck.length;
+            
+            // Calculate optimal rows and cols (closest to square, avoiding remainders)
+            let cols=1, rows=count;
+            for (let i = Math.floor(Math.sqrt(count)); i >= 1; i--) {
+                if (count % i === 0) {
+                    rows = i;
+                    cols = count / i;
+                    // Prefer landscape (more cols than rows)
+                    if (rows > cols) { let temp = rows; rows = cols; cols = temp; }
+                    break;
+                }
+            }
+
             grid.style.gridTemplateColumns=`repeat(${cols},1fr)`; grid.style.gridTemplateRows=`repeat(${rows},1fr)`;
             deck.forEach((card,index)=>{ const el=document.createElement('div'); el.className='card'; el.innerHTML=`<div class="card-inner"><div class="face back">?</div><div class="face front"><div class="content-wrap">${card.html}</div></div></div>`; el.onclick=()=>handleCardClick(index); grid.appendChild(el); cards.push({...card,el}); });
             if (window.MathJax) { setTimeout(() => window.MathJax.typesetPromise(), 100); }
