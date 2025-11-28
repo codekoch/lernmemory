@@ -69,10 +69,9 @@
             Shuffle: (p) => <Icon {...p} path={<><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l14.2-13h3.1"/><path d="M2 5h1.6c1.3 0 2.5.6 3.3 1.7l1.6 1.5"/><path d="M12 15.5l2.7 2.5c.8 1.1 2 1.7 3.3 1.7h3.1"/></>} />,
             FlipHorizontal: (p) => <Icon {...p} path={<><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M12 3v18"/></>} />,
             Type: (p) => <Icon {...p} path={<><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></>} />,
-            Trophy: (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />
+            Trophy: (p) => <Icon {...p} path={<><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>} />,
+            X: (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />
         };
-
-        // --- MAIN APP COMPONENT ---
 
         const DEFAULT_PAIRS = [
             { id: 1, a: "Verschiebung um 3 nach <br><b>rechts</b>", b: "\\( f(x) = (x-3)^2 \\)" },
@@ -104,6 +103,7 @@
             const [winner, setWinner] = useState(null);
             const [canGuess, setCanGuess] = useState(false);
             const [winReason, setWinReason] = useState("");
+            const [waitingForTurnEnd, setWaitingForTurnEnd] = useState(false);
             const guessTimerRef = useRef(null);
 
             useEffect(() => {
@@ -167,6 +167,7 @@
                 setWinner(null);
                 setScores({1: 0, 2: 0});
                 setWinReason("");
+                setWaitingForTurnEnd(false);
                 if (guessTimerRef.current) clearTimeout(guessTimerRef.current);
             };
 
@@ -201,6 +202,7 @@
                 setScores({ 1: 0, 2: 0 });
                 setTurn(1);
                 setCanGuess(false);
+                setWaitingForTurnEnd(false);
                 setGameMessage("Spieler 1 ist am Zug");
                 setShowGuessInput(false);
                 setPhase('play');
@@ -218,6 +220,8 @@
             };
 
             const handleCardClick = (index) => {
+                if (waitingForTurnEnd) return; 
+
                 if (canGuess) {
                     setCanGuess(false);
                     if (guessTimerRef.current) clearTimeout(guessTimerRef.current);
@@ -233,6 +237,7 @@
                     const card1 = cards[newFlipped[0]];
                     const card2 = cards[newFlipped[1]];
                     if (card1.pairId === card2.pairId) {
+                        // MATCH
                         setTimeout(() => {
                             const newMatched = [...matchedIndices, newFlipped[0], newFlipped[1]];
                             setMatchedIndices(newMatched);
@@ -249,15 +254,21 @@
                             }, 3000);
                         }, 1000);
                     } else {
-                        setTimeout(() => {
-                            setFlippedIndices([]);
-                            const nextTurn = turn === 1 ? 2 : 1;
-                            setTurn(nextTurn);
-                            setCanGuess(false);
-                            setGameMessage(`Leider falsch. Spieler ${nextTurn} ist dran.`);
-                        }, 1500);
+                        // NO MATCH - NEU: Kein Timeout, sondern Warten auf User
+                        setWaitingForTurnEnd(true);
+                        setGameMessage("Leider falsch.");
                     }
                 }
+            };
+
+            // NEU: Funktion zum manuellen Beenden des Zuges
+            const finishTurn = () => {
+                setFlippedIndices([]);
+                const nextTurn = turn === 1 ? 2 : 1;
+                setTurn(nextTurn);
+                setWaitingForTurnEnd(false);
+                setCanGuess(false); 
+                setGameMessage(`Spieler ${nextTurn} ist am Zug`);
             };
 
             const handleOpenGuessModal = () => {
@@ -284,9 +295,8 @@
                 }
             };
 
-            // --- DOWNLOAD GENERATOR ---
             const downloadStandalone = () => {
-                const endScript = "</" + "script>"; // Create the closing tag dynamically to avoid breaking the editor
+                const endScript = "</" + "script>";
                 const head = `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -298,6 +308,7 @@
     ${endScript}
     <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">${endScript}
     <style>
+        * { box-sizing: border-box; }
         body { font-family: system-ui, -apple-system, sans-serif; background: #f1f5f9; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: #0f172a; }
         .screen { display: none; flex-direction: column; justify-content: center; align-items: center; height: 100%; padding: 20px; text-align: center; }
         .screen.active { display: flex; }
@@ -316,20 +327,23 @@
         #game-interface { display: none; flex-direction: column; height: 100%; padding: 1rem; box-sizing: border-box; max-width: 1200px; margin: 0 auto; width: 100%; }
         #game-interface.active { display: flex; }
         .header { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; background: white; padding: 1rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); border-radius: 0.75rem; margin-bottom: 1rem; z-index: 50; }
-        .score-box { text-align: center; padding: 0.25rem 1rem; border-radius: 0.5rem; border: 2px solid transparent; transition: all 0.3s; }
+        .player-wrapper { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 100px; }
+        .score-box { text-align: center; padding: 0.25rem 1rem; border-radius: 0.5rem; border: 2px solid transparent; transition: all 0.3s; width: 100%; box-sizing: border-box; }
         .score-box > div:first-child { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
         .score-box > div:last-child { font-size: 1.5rem; font-weight: 700; }
-        .p1-active { border-color: #3b82f6; background: #eff6ff; }
-        .p1-active > div:first-child { color: #1e40af; }
-        .p1-active > div:last-child { color: #2563eb; }
-        .p2-active { border-color: #ec4899; background: #fdf2f8; }
-        .p2-active > div:first-child { color: #9d174d; }
-        .p2-active > div:last-child { color: #db2777; }
-        .center-controls { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+        .p1-active .score-box { border-color: #3b82f6; background: #eff6ff; }
+        .p1-active .score-box > div:first-child { color: #1e40af; }
+        .p1-active .score-box > div:last-child { color: #2563eb; }
+        .p2-active .score-box { border-color: #ec4899; background: #fdf2f8; }
+        .p2-active .score-box > div:first-child { color: #9d174d; }
+        .p2-active .score-box > div:last-child { color: #db2777; }
+        .center-controls { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; flex: 1; }
         .game-msg { font-size: 0.875rem; font-weight: 500; color: #64748b; }
         .guess-btn { background: #f59e0b; font-size: 0.875rem; padding: 0.375rem 1rem; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease; border-radius: 9999px; border: none; cursor: pointer; color: white; font-weight: 700; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
         .guess-btn.active { background: #d97706; transform: scale(1.05); box-shadow: 0 0 0 4px #fde68a; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         .guess-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; box-shadow: none; animation: none; }
+        .cover-btn { background: #64748b; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 9999px; border: none; cursor: pointer; color: white; font-weight: 700; visibility: hidden; margin-top: 2px; width: 100%; white-space: nowrap; }
+        .cover-btn:hover { background: #475569; }
         @keyframes pulse { 50% { opacity: .5; } }
         .game-container { flex: 1; position: relative; border: 4px solid #1e293b; border-radius: 0.75rem; background: white; overflow: hidden; display: flex; justify-content: center; align-items: center; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); }
         .message-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; opacity: 0; display: flex; transition: opacity 0.3s ease; }
@@ -340,8 +354,8 @@
         .card.flipped { z-index: 50; }
         .face { position: absolute; top: 0; left: 0; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; justify-content: center; align-items: center; }
         .face.back { background: #4f46e5; color: rgba(255,255,255,0.5); font-size: 2rem; font-weight: 700; }
-        .face.front { background: white; border: 2px solid #4f46e5; color: #312e81; font-weight: 600; transform: rotateY(180deg); overflow: hidden; padding: 4px; font-size: clamp(0.8rem, 2vw, 1.5rem); }
-        .content-wrap { width: 100%; text-align: center; word-break: break-word; overflow-wrap: break-word; hyphens: auto; }
+        .face.front { background: white; border: 2px solid #4f46e5; color: #312e81; font-weight: 600; transform: rotateY(180deg); overflow: hidden; padding: 4px; font-size: clamp(0.75rem, 2.5vw, 1.25rem); }
+        .content-wrap { width: 100%; max-width: 100%; text-align: center; word-break: break-word; overflow-wrap: break-word; hyphens: auto; }
         mjx-container { font-size: inherit !important; outline: 0 !important; }
         .card.matched { opacity: 0; pointer-events: none; visibility: hidden; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
@@ -356,13 +370,17 @@
     <div id="screen-mode" class="screen active"><h1>Spielmodus wählen</h1><button class="mode-btn" onclick="selectMode('normal')"><div class="mode-icon"><svg class="icon" viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg></div><div><div class="mode-title">Normal</div><div class="mode-desc">Text normal lesbar</div></div></button><button class="mode-btn" onclick="selectMode('flipped')"><div class="mode-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M12 3v18"/></svg></div><div><div class="mode-title">Spiegelverkehrt</div><div class="mode-desc">Text ist gespiegelt</div></div></button><button class="mode-btn" onclick="selectMode('random')"><div class="mode-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l14.2-13h3.1"/><path d="M2 5h1.6c1.3 0 2.5.6 3.3 1.7l1.6 1.5"/><path d="M12 15.5l2.7 2.5c.8 1.1 2 1.7 3.3 1.7h3.1"/></svg></div><div><div class="mode-title">Buchstabensalat</div><div class="mode-desc">Buchstaben durcheinander</div></div></button></div>
     <div id="screen-setup1" class="screen"><h1>Spieler 1 - Setup</h1><p class="game-msg">Geheime Nachricht für Spieler 2 eingeben.</p><div class="input-group"><input type="password" id="inputP1" placeholder="Geheime Nachricht"><input type="password" id="inputP1Conf" placeholder="Bestätigung"></div><button class="action-btn" onclick="confirmP1()">Weiter <svg class="icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></div>
     <div id="screen-setup2" class="screen"><h1>Spieler 2 - Setup</h1><p class="game-msg">Geheime Nachricht für Spieler 1 eingeben.</p><div class="input-group"><input type="password" id="inputP2" placeholder="Geheime Nachricht"><input type="password" id="inputP2Conf" placeholder="Bestätigung"></div><button class="action-btn" onclick="startGame()">Start <svg class="icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></button></div>
-    <div id="game-interface"><div class="header"><div id="score1-box" class="score-box p1-active"><div>Spieler 1</div><div id="score1">0</div></div><div class="center-controls"><div id="game-message" class="game-msg">Spieler 1 ist am Zug</div><div style="position: relative;"><button id="guessBtn" class="guess-btn" onclick="openGuessModal()" disabled><span id="lockIcon"><svg class="icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Lösung raten?</span></button><div id="timer-bar"></div></div></div><div id="score2-box" class="score-box"><div>Spieler 2</div><div id="score2">0</div></div></div><div class="game-container"><div id="bg-message" class="message-layer"></div><div id="grid" class="card-grid"></div></div></div>
+    <div id="game-interface"><div class="header">
+        <div id="p1-wrapper" class="player-wrapper"><div class="score-box"><div>Spieler 1</div><div id="score1">0</div></div><button id="coverBtn1" class="cover-btn" onclick="finishTurn()">Weiter</button></div>
+        <div class="center-controls"><div id="game-message" class="game-msg">Spieler 1 ist am Zug</div><div style="position: relative;"><button id="guessBtn" class="guess-btn" onclick="openGuessModal()" disabled><span id="lockIcon"><svg class="icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Lösung raten?</span></button><div id="timer-bar"></div></div></div>
+        <div id="p2-wrapper" class="player-wrapper"><div class="score-box"><div>Spieler 2</div><div id="score2">0</div></div><button id="coverBtn2" class="cover-btn" onclick="finishTurn()">Weiter</button></div>
+    </div><div class="game-container"><div id="bg-message" class="message-layer"></div><div id="grid" class="card-grid"></div></div></div>
     <div id="guessModal" class="modal"><div class="modal-content"><h2 id="guessTitle" style="font-size:1.25rem; font-weight:700; margin-bottom:0.5rem; color:#1e293b;">Spieler X rät</h2><p style="color:#64748b; font-size:0.875rem; margin-bottom:1rem;">Welche Nachricht versteckt sich hinter den Karten?</p><input type="text" id="guessInput" style="font-size: 1.25rem; padding: 0.75rem; border-radius: 0.5rem; border: 2px solid #cbd5e1; text-align: center; width: 100%; box-sizing: border-box; margin-bottom:1.5rem; outline:none; text-transform:uppercase; font-weight:700;"><div style="display:flex; gap:10px; justify-content:center;"><button class="action-btn" style="margin:0; background:#64748b; padding:0.5rem 1.5rem; font-size:1rem;" onclick="closeGuessModal()">Abbrechen</button><button class="action-btn" style="margin:0; background:#16a34a; padding:0.5rem 1.5rem; font-size:1rem;" onclick="submitGuess()">Prüfen</button></div></div></div>
     <div id="winModal" class="modal"><div class="modal-content"><svg class="icon" viewBox="0 0 24 24" style="width:80px; height:80px; color:#f59e0b; margin-bottom:1rem;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg><h1 id="winTitle" style="color:#1e293b; font-size:2rem; margin-bottom:0.5rem;">GEWONNEN!</h1><p id="winText" style="color:#64748b; margin-bottom:2rem; font-size:1.2rem;"></p><button class="action-btn" onclick="location.reload()" style="background:#4f46e5; margin:0 auto;">Nochmal spielen</button></div></div>
 `;
                 const scriptContent = `
         const config = ${JSON.stringify({ pairs: pairs })};
-        let p1Secret="", p2Secret="", displayMode="normal", cards=[], flipped=[], matched=[], turn=1, scores={1:0,2:0}, lockBoard=false, canGuess=false, guessTimer=null;
+        let p1Secret="", p2Secret="", displayMode="normal", cards=[], flipped=[], matched=[], turn=1, scores={1:0,2:0}, lockBoard=false, canGuess=false, guessTimer=null, waitingForTurnEnd=false;
         function selectMode(m) { displayMode=m; document.getElementById('screen-mode').classList.remove('active'); document.getElementById('screen-setup1').classList.add('active'); }
         function confirmP1() { const val=document.getElementById('inputP1').value.trim(), conf=document.getElementById('inputP1Conf').value.trim(); if(!val || val!==conf) return alert("Fehlerhafte Eingabe"); p1Secret=val; document.getElementById('screen-setup1').classList.remove('active'); document.getElementById('screen-setup2').classList.add('active'); }
         function startGame() { const val=document.getElementById('inputP2').value.trim(), conf=document.getElementById('inputP2Conf').value.trim(); if(!val || val!==conf) return alert("Fehlerhafte Eingabe"); p2Secret=val; document.getElementById('screen-setup2').classList.remove('active'); document.getElementById('game-interface').classList.add('active'); initBoard(); updateTurnUI(); }
@@ -380,6 +398,7 @@
             msgEl.innerHTML=\`<svg width="100%" height="100%" viewBox="0 0 100 20" preserveAspectRatio="none"><text x="50" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="18" fill="#166534" textLength="100" lengthAdjust="spacingAndGlyphs" transform="scale(\${scaleX}, 1)" transform-origin="center">\${displayText}</text></svg>\`;
         }
         function handleCardClick(index) {
+            if(waitingForTurnEnd) return;
             if(canGuess) { setCanGuess(false); document.getElementById('game-message').innerText="Ratechance verpasst. Weiter geht's."; if(matched.length===cards.length){checkWinByScore(); return;} }
             if(lockBoard || matched.includes(index) || flipped.includes(index)) return;
             const card=cards[index]; card.el.classList.add('flipped'); flipped.push(index); if(flipped.length===2) checkMatch();
@@ -393,12 +412,25 @@
         }
         function checkMatch() {
             lockBoard=true; const c1=cards[flipped[0]], c2=cards[flipped[1]];
-            if(c1.pid===c2.pid) { setTimeout(()=>{cards[flipped[0]].el.classList.add('matched'); cards[flipped[1]].el.classList.add('matched'); matched.push(...flipped); flipped=[]; scores[turn]++; const b1=document.getElementById('score1-box'), b2=document.getElementById('score2-box'); document.getElementById('score1').innerText=scores[1]; document.getElementById('score2').innerText=scores[2]; let s=turn===1?p2Secret:p1Secret; updateMessage(s); document.getElementById('game-message').innerText="Treffer! 3 Sekunden Zeit zum Raten..."; setCanGuess(true); lockBoard=false;},1000); }
-            else { setTimeout(()=>{cards[flipped[0]].el.classList.remove('flipped'); cards[flipped[1]].el.classList.remove('flipped'); flipped=[]; turn=turn===1?2:1; setCanGuess(false); updateTurnUI(); document.getElementById('game-message').innerText="Leider falsch. Spieler "+turn+" ist dran."; lockBoard=false;},1500); }
+            if(c1.pid===c2.pid) { setTimeout(()=>{cards[flipped[0]].el.classList.add('matched'); cards[flipped[1]].el.classList.add('matched'); matched.push(...flipped); flipped=[]; scores[turn]++; const b1=document.getElementById('p1-wrapper'), b2=document.getElementById('p2-wrapper'); document.getElementById('score1').innerText=scores[1]; document.getElementById('score2').innerText=scores[2]; let s=turn===1?p2Secret:p1Secret; updateMessage(s); document.getElementById('game-message').innerText="Treffer! 3 Sekunden Zeit zum Raten..."; setCanGuess(true); lockBoard=false;},1000); }
+            else { 
+                waitingForTurnEnd = true;
+                const btn = turn === 1 ? document.getElementById('coverBtn1') : document.getElementById('coverBtn2');
+                btn.style.visibility = 'visible';
+                document.getElementById('game-message').innerText = "Leider falsch.";
+            }
+        }
+        function finishTurn() {
+            cards[flipped[0]].el.classList.remove('flipped'); cards[flipped[1]].el.classList.remove('flipped'); flipped=[]; 
+            const btn = turn === 1 ? document.getElementById('coverBtn1') : document.getElementById('coverBtn2');
+            btn.style.visibility = 'hidden';
+            turn=turn===1?2:1; 
+            waitingForTurnEnd = false;
+            setCanGuess(false); updateTurnUI(); document.getElementById('game-message').innerText="Spieler "+turn+" ist am Zug."; lockBoard=false;
         }
         function updateTurnUI() {
             document.getElementById('score1').innerText=scores[1]; document.getElementById('score2').innerText=scores[2];
-            const b1=document.getElementById('score1-box'), b2=document.getElementById('score2-box'); let s=turn===1?p2Secret:p1Secret;
+            const b1=document.getElementById('p1-wrapper'), b2=document.getElementById('p2-wrapper'); let s=turn===1?p2Secret:p1Secret;
             if(turn===1){b1.classList.add('p1-active');b2.classList.remove('p2-active');}else{b1.classList.remove('p1-active');b2.classList.add('p2-active');} updateMessage(s);
         }
         function checkWinByScore() {
@@ -517,8 +549,14 @@
                                 <div className={`flex flex-col items-center px-4 py-1 rounded-lg border-2 transition-all ${turn === 1 ? 'bg-blue-50 border-blue-500 scale-105' : 'border-transparent opacity-60'}`}>
                                     <span className="text-xs font-bold uppercase text-blue-800">Spieler 1</span>
                                     <span className="text-2xl font-bold text-blue-600">{scores[1]}</span>
+                                    <button 
+                                        onClick={finishTurn} 
+                                        className={`mt-2 px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-full text-xs shadow-md transition-all animate-bounce-in whitespace-nowrap ${waitingForTurnEnd && turn === 1 ? 'visible' : 'invisible'}`}
+                                    >
+                                        Weiter
+                                    </button>
                                 </div>
-                                <div className="flex flex-col items-center gap-2">
+                                <div className="flex flex-col items-center gap-2 flex-1">
                                     <div className="text-xs md:text-sm font-medium text-slate-500 text-center">{gameMessage}</div>
                                     <div className="relative">
                                         <button onClick={handleOpenGuessModal} disabled={!canGuess} className={`px-4 py-1.5 text-sm font-bold rounded-full shadow-sm transition flex items-center gap-2 ${canGuess ? 'bg-amber-500 hover:bg-amber-600 text-white cursor-pointer ring-4 ring-amber-200 animate-pulse' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
@@ -531,6 +569,12 @@
                                 <div className={`flex flex-col items-center px-4 py-1 rounded-lg border-2 transition-all ${turn === 2 ? 'bg-pink-50 border-pink-500 scale-105' : 'border-transparent opacity-60'}`}>
                                     <span className="text-xs font-bold uppercase text-pink-800">Spieler 2</span>
                                     <span className="text-2xl font-bold text-pink-600">{scores[2]}</span>
+                                    <button 
+                                        onClick={finishTurn} 
+                                        className={`mt-2 px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded-full text-xs shadow-md transition-all animate-bounce-in whitespace-nowrap ${waitingForTurnEnd && turn === 2 ? 'visible' : 'invisible'}`}
+                                    >
+                                        Weiter
+                                    </button>
                                 </div>
                             </div>
 
