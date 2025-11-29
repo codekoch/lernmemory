@@ -495,7 +495,7 @@
             if(turn===1){b1.classList.add('p1-active');b2.classList.remove('p2-active');}else{b1.classList.remove('p1-active');b2.classList.add('p2-active');} updateMessage(s);
         }
         function showSolutions() {
-            let html = '<div style="margin-top:10px; text-align:left; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">';
+            let html = '<div style="margin-top:10px; text-align:left; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0;"><h3 style="font-weight:bold; color:#1e293b; margin-bottom:10px; border-bottom:1px solid #cbd5e1; padding-bottom:5px;">Die Lösungswörter:</h3>';
             // Helper to generate row
             const getRow = (p, s) => {
                 let vis = s;
@@ -651,7 +651,7 @@
                             <p className="text-xl text-slate-600 mb-8">{winReason}</p>
                             
                             <div className="w-full max-w-lg bg-slate-50 p-6 rounded-xl border border-slate-200 mb-8 text-left">
-                                <h3 className="font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Die Lösungen:</h3>
+                                <h3 className="font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Die Lösungswörter:</h3>
                                 {renderRevealedSecret('Spieler 1', p1Secret)}
                                 {renderRevealedSecret('Spieler 2', p2Secret)}
                             </div>
